@@ -8,10 +8,18 @@ using Random = UnityEngine.Random;
 
 public class Grid : MonoBehaviour
 {
+
+    public enum GridDifficulty
+    {
+        EASY,
+        NORMAL,
+        HARD
+    }
     public List<GameObject> listItems;
     public int gridSize = 10;
     public float padding = 10.0f;
     public float timeRateBetweenItems = 0.05f;
+    public GridDifficulty difficulty;
 
     private Player _playerRef;
     private Slot[,] _grid;
@@ -173,6 +181,26 @@ public class Grid : MonoBehaviour
                 _grid[x, y].item.Match3();
             }
         }
+        _initAnimation = true;
+    }
+
+    public void SetEasyDifficulty()
+    {
+        if (_initAnimation) return;
+        difficulty = GridDifficulty.EASY;
+        ClearItems();
+    }
+    public void SetNormalDifficulty()
+    {
+        if (_initAnimation) return;
+        difficulty = GridDifficulty.NORMAL;
+        ClearItems();
+    }
+    public void SetHardDifficulty()
+    {
+        if (_initAnimation) return;
+        difficulty = GridDifficulty.HARD;
+        ClearItems();
     }
     public void InitializeItems()
     {
@@ -188,6 +216,8 @@ public class Grid : MonoBehaviour
                 if (_animationY >= gridSize)
                 {
                     _initAnimation = false;
+                    _animationX = 0;
+                    _animationY = 0;
                 }
             }
 
@@ -556,7 +586,20 @@ public class Grid : MonoBehaviour
     }
     private GameObject GetRandomItemFromList()
     {
-        int randomIndex = Random.Range(0, listItems.Count);
+        int randomIndex = 0;
+        switch (difficulty)
+        {
+            case GridDifficulty.EASY:
+                randomIndex = Random.Range(0, 3);
+                break;
+            case GridDifficulty.NORMAL:
+                randomIndex = Random.Range(0, 4);
+                break;
+            case GridDifficulty.HARD:
+                randomIndex = Random.Range(0, 5);
+                break;
+        }
+        
         return listItems[randomIndex];
     }
 
