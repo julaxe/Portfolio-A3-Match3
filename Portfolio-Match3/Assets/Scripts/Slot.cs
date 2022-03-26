@@ -47,7 +47,8 @@ public class Slot : MonoBehaviour
     public void AssignNewItem(Item newItem)
     {
         item = newItem;
-        item.MoveToSlot(transform.position);
+        if(item)
+            item.MoveToSlot(transform.position);
     }
     public void SetFocused(bool state)
     {

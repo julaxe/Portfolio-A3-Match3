@@ -64,24 +64,32 @@ public class Grid : MonoBehaviour
             if (_isMatching)
             {
                 //move items
-                var temp = _currentSlot.item;
-                _currentSlot.AssignNewItem(_grid[_currentX, _currentY].item);
-                _grid[_currentX, _currentY].AssignNewItem(temp);
-                
-                //look for matching here.
-                List<Vector2Int> match3List = CheckIfMatch3(_currentX, _currentY);
-                List<Vector2Int> match3List2 = CheckIfMatch3(_currentSlot.x, _currentSlot.y);
+                MoveItemsInBetweenSlots(_currentSlot, _grid[_currentX, _currentY]);
 
-                if (match3List.Count > 2)
+                //look for matching here.
+                if (_currentSlot.item.itemType == _grid[_currentX, _currentY].item.itemType)
                 {
-                    Match3(match3List);
+                    List<Vector2Int> match3List = CheckIfMatch3(_currentX, _currentY);
+                    if (match3List.Count > 2)
+                    {
+                        Match3(match3List);
+                    }
+                }
+                else
+                {
+                    List<Vector2Int> match3List = CheckIfMatch3(_currentX, _currentY);
+                    if (match3List.Count > 2)
+                    {
+                        Match3(match3List);
+                    }
+                    List<Vector2Int> match3List2 = CheckIfMatch3(_currentSlot.x, _currentSlot.y);
+                    if (match3List2.Count > 2)
+                    {
+                        Match3(match3List2);
+                    }
                 }
                 
-                if (match3List2.Count > 2)
-                {
-                    Match3(match3List2);
-                }
-                
+
                 _currentSlot.SetSelected(false);
                 _currentSlot = _grid[_currentX, _currentY];
                 _currentSlot.SetFocused(true);
@@ -171,14 +179,17 @@ public class Grid : MonoBehaviour
         List<Vector2Int> horizontalList = GetHorizontalList(x, y);
         List<Vector2Int> match3List = new List<Vector2Int>();
 
-        if (verticalList.Count > 2)
+        //itself
+        match3List.Add(new Vector2Int(x, y));
+        
+        if (verticalList.Count > 1)
         {
             foreach (var item in verticalList)
             {
                 match3List.Add(item);
             }
         }
-        if (horizontalList.Count > 2)
+        if (horizontalList.Count > 1)
         {
             foreach (var item in horizontalList)
             {
@@ -194,13 +205,11 @@ public class Grid : MonoBehaviour
         int currentX = x;
         int currentY = y;
         List<Vector2Int> horizontalList = new List<Vector2Int>();
-        //itself
-        horizontalList.Add(new Vector2Int(currentX,currentY));
         //left side
         while (NeighborExits(currentX - 1, y))
         {
             currentX -= 1;
-            if (_grid[currentX, currentY].item.itemType == _currentSlot.item.itemType)
+            if (_grid[currentX, currentY].item.itemType == _grid[x, y].item.itemType)
             {
                 horizontalList.Add(new Vector2Int(currentX,currentY));
             }
@@ -214,7 +223,7 @@ public class Grid : MonoBehaviour
         while (NeighborExits(currentX + 1, y))
         {
             currentX += 1;
-            if (_grid[currentX, currentY].item.itemType == _currentSlot.item.itemType)
+            if (_grid[currentX, currentY].item.itemType == _grid[x, y].item.itemType)
             {
                 horizontalList.Add(new Vector2Int(currentX,currentY));
             }
@@ -231,13 +240,11 @@ public class Grid : MonoBehaviour
         int currentX = x;
         int currentY = y;
         List<Vector2Int> verticalList = new List<Vector2Int>();
-        //itself
-        verticalList.Add(new Vector2Int(currentX,currentY));
         //top side
         while (NeighborExits(x, currentY - 1))
         {
             currentY -= 1;
-            if (_grid[currentX, currentY].item.itemType == _currentSlot.item.itemType)
+            if (_grid[currentX, currentY].item.itemType == _grid[x, y].item.itemType)
             {
                 verticalList.Add(new Vector2Int(currentX,currentY));
             }
@@ -251,7 +258,7 @@ public class Grid : MonoBehaviour
         while (NeighborExits(x, currentY + 1))
         {
             currentY += 1;
-            if (_grid[currentX, currentY].item.itemType == _currentSlot.item.itemType)
+            if (_grid[currentX, currentY].item.itemType == _grid[x, y].item.itemType)
             {
                 verticalList.Add(new Vector2Int(currentX,currentY));
             }
@@ -270,7 +277,56 @@ public class Grid : MonoBehaviour
         {
             _playerRef.score += _grid[item.x, item.y].item.points;
             _grid[item.x, item.y].item.Match3();
+            _grid[item.x, item.y].item = null;
         }
+        //move everything down
+        //get lowest point for each column.
+        List<Vector3Int> listOfColumnsToAdjust = new List<Vector3Int>();
+        foreach (var item1 in match3List)
+        {
+            if (listOfColumnsToAdjust.Exists(item => item.x == item1.x)) continue; //column already checked
+            int lowestRow = item1.y;
+            int amountOfItemsInThatColumn = 1;
+            foreach (var item2 in match3List)
+            {
+                if (item1 == item2) continue;
+                if (item1.x == item2.x)
+                {
+                    amountOfItemsInThatColumn += 1;
+                    if (item2.y > item1.y)
+                    {
+                        lowestRow = item2.y;
+                    }
+                }
+            }
+            listOfColumnsToAdjust.Add(new Vector3Int(item1.x, lowestRow, amountOfItemsInThatColumn));
+            
+        }
+
+        foreach (var item in listOfColumnsToAdjust)
+        {
+            for (int i = 0; i < item.z; i++)
+            {
+                AdjustColumn(item.x, item.y);
+            }
+        }
+        
+    }
+
+    private void AdjustColumn(int column, int row)
+    {
+        while (row != 0)
+        {
+            row -= 1;
+            MoveItemsInBetweenSlots(_grid[column,row + 1], _grid[column,row]);
+        }
+    }
+
+    private void MoveItemsInBetweenSlots(Slot slot1, Slot slot2)
+    {
+        var temp = slot1.item;
+        slot1.AssignNewItem(slot2.item);
+        slot2.AssignNewItem(temp);
     }
     private GameObject GetRandomItemFromList()
     {
@@ -280,9 +336,17 @@ public class Grid : MonoBehaviour
 
     private bool NeighborExits(int x, int y)
     {
-        return x >= 0 &&
-               x < gridSize && 
-               y >= 0 && 
-               y < gridSize;
+        if (x >= 0 &&
+            x < gridSize &&
+            y >= 0 &&
+            y < gridSize)
+        {
+            if (_grid[x, y].item != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

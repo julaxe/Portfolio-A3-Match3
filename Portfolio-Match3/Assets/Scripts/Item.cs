@@ -86,6 +86,6 @@ public class Item : MonoBehaviour
 
     public void DestroyItem()
     {
-        Destroy(this);
+        Destroy(this.gameObject);
     }
 }

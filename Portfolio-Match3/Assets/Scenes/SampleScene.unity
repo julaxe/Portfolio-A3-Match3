@@ -246,6 +246,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1047326259}
   - component: {fileID: 1047326260}
+  - component: {fileID: 1047326261}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -261,8 +262,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1047326258}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3, y: 2, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -3, y: 3, z: 0}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
@@ -279,9 +280,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38cb447f88945e94b80dced965da5695, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  listItems: []
+  listItems:
+  - {fileID: 7076889621110644531, guid: 1f3bdb5e04a523241891018d9a6116d4, type: 3}
+  - {fileID: 6956153659455565775, guid: 4fed083c440120347b1244c96236e0b7, type: 3}
+  - {fileID: 5574686315545905580, guid: ef3f87dae7052f74191de05c18cd5b1c, type: 3}
   gridSize: 10
   padding: 0.6
+  timeRateBetweenItems: 0.05
+--- !u!114 &1047326261
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1047326258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c924a76a13e28d45b6fe874a9110ccb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  score: 0
 --- !u!1 &1239597928
 GameObject:
   m_ObjectHideFlags: 0
