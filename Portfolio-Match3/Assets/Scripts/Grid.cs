@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -24,6 +26,11 @@ public class Grid : MonoBehaviour
     private int _animationX = 0;
     private int _animationY = 0;
     private bool _initAnimation = true;
+
+    private List<Vector2Int> _holesList;
+
+    private List<Vector2Int> _hintList;
+    private bool _isShowingHint;
     
     
     void Start()
@@ -31,6 +38,7 @@ public class Grid : MonoBehaviour
         _playerRef = GetComponent<Player>();
         _slotPrefab = Resources.Load<GameObject>("Prefabs/Slot");
         _grid = new Slot[gridSize,gridSize];
+        _holesList = new List<Vector2Int>();
 
         CreateGrid();
     }
@@ -116,12 +124,29 @@ public class Grid : MonoBehaviour
                 _isMatching = true;
             }
         }
-        
+
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            if (_isShowingHint)
+            {
+                ClearHint();
+                _isShowingHint = false;
+            }
+            else
+            {
+                ShowHint();
+
+                _isShowingHint = true;
+            }
+        }
+
+
     }
     private void Update()
     {
         HandleInputs();
         InitializeItems();
+        FillHolesOnGrid();
     }
 
     public void CreateGrid()
@@ -154,7 +179,7 @@ public class Grid : MonoBehaviour
         if (!_initAnimation) return;
         if (_timer >= timeRateBetweenItems)
         {
-            _grid[_animationX, _animationY].AddItem(GetRandomItemFromList());
+            AddItem(_animationX, _animationY);
             _animationX += 1;
             if (_animationX >= gridSize)
             {
@@ -170,6 +195,34 @@ public class Grid : MonoBehaviour
         }
 
         _timer += Time.deltaTime;
+    }
+
+    private void FillHolesOnGrid()
+    {
+        if (_holesList.Count > 0)
+        {
+            var groupedList = _holesList.GroupBy(hole => hole.x, hole => hole.y);
+            
+            foreach (var item in groupedList)
+            {
+                int amount = 0;
+                foreach (int amountOfItems in item)
+                {
+                    amount += amountOfItems;
+                }
+                
+                for (int i = 0; i < amount; i++) //amount of holes in the column
+                {
+                    AddItem(item.Key, amount - 1 - i);
+                }
+            }
+            _holesList.Clear();
+        }
+    }
+
+    private void AddItem(int x, int y)
+    {
+        _grid[x, y].AddItem(GetRandomItemFromList());
     }
 
     private List<Vector2Int> CheckIfMatch3(int x, int y)
@@ -310,7 +363,180 @@ public class Grid : MonoBehaviour
                 AdjustColumn(item.x, item.y);
             }
         }
+
+        foreach (var item in listOfColumnsToAdjust)
+        {
+            _holesList.Add(new Vector2Int(item.x, item.z));
+        }
+
+
+
+    }
+
+    private void ShowHint()
+    {
+        for (int x = 0; x < gridSize; x++)
+        {
+            for (int y = 0; y < gridSize; y++)
+            {
+                if (GetHintFromSlot(x, y))
+                {
+                    x = gridSize;
+                    break;
+                }
+            } 
+        }
+
+        foreach (var item in _hintList)
+        {
+            _grid[item.x,item.y].item.Hint();
+        }
+    }
+
+    private void ClearHint()
+    {
+        foreach (var item in _hintList)
+        {
+            _grid[item.x,item.y].item.Idle();
+        }
+        _hintList.Clear();
+    }
+
+    private bool GetHintFromSlot(int x, int y)
+    {
+        if (CheckHintLeft(x, y)) return true;
+        if (CheckHintRight(x, y)) return true;
+        if (CheckHintTop(x, y)) return true;
+        return CheckHintBottom(x, y);
+    }
+
+    private bool CheckHintLeft(int x, int y)
+    {
+        List<Vector2Int> hintNeighbors = new List<Vector2Int>();
+        List<Item.ItemType> typesInNeighbors = new List<Item.ItemType>();
+        int currentX = x;
+        int currentY = y;
         
+        hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+        
+        while (NeighborExits(currentX - 1, y))
+        {
+            currentX -= 1;
+            if (!typesInNeighbors.Exists(type => type == _grid[currentX, currentY].item.itemType))
+            {
+                typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+                if (typesInNeighbors.Count > 2)
+                {
+                    break;
+                }
+            }
+            hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        }
+
+        if (hintNeighbors.Count >= 4) //we have a hint
+        {
+            _hintList = hintNeighbors;
+            return true;
+        }
+
+        return false;
+    }
+    private bool CheckHintRight(int x, int y)
+    {
+        List<Vector2Int> hintNeighbors = new List<Vector2Int>();
+        List<Item.ItemType> typesInNeighbors = new List<Item.ItemType>();
+        int currentX = x;
+        int currentY = y;
+        
+        hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+        
+        while (NeighborExits(currentX + 1, y))
+        {
+            currentX += 1;
+            if (!typesInNeighbors.Exists(type => type == _grid[currentX, currentY].item.itemType))
+            {
+                typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+                if (typesInNeighbors.Count > 2)
+                {
+                    break;
+                }
+            }
+            hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        }
+
+        if (hintNeighbors.Count >= 4) //we have a hint
+        {
+            _hintList = hintNeighbors;
+            return true;
+        }
+
+        return false;
+    }
+    private bool CheckHintTop(int x, int y)
+    {
+        List<Vector2Int> hintNeighbors = new List<Vector2Int>();
+        List<Item.ItemType> typesInNeighbors = new List<Item.ItemType>();
+        int currentX = x;
+        int currentY = y;
+        
+        hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+        
+        while (NeighborExits(x, currentY -1))
+        {
+            currentY -= 1;
+            if (!typesInNeighbors.Exists(type => type == _grid[currentX, currentY].item.itemType))
+            {
+                typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+                if (typesInNeighbors.Count > 2)
+                {
+                    break;
+                }
+            }
+            hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        }
+
+        if (hintNeighbors.Count >= 4) //we have a hint
+        {
+            _hintList = hintNeighbors;
+            return true;
+        }
+
+        return false;
+    }
+    private bool CheckHintBottom(int x, int y)
+    {
+        List<Vector2Int> hintNeighbors = new List<Vector2Int>();
+        List<Item.ItemType> typesInNeighbors = new List<Item.ItemType>();
+        int currentX = x;
+        int currentY = y;
+        
+        hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+        
+        while (NeighborExits(x, currentY +1))
+        {
+            currentX += 1;
+            if (!typesInNeighbors.Exists(type => type == _grid[currentX, currentY].item.itemType))
+            {
+                typesInNeighbors.Add(_grid[currentX, currentY].item.itemType);
+                if (typesInNeighbors.Count > 2)
+                {
+                    break;
+                }
+            }
+            hintNeighbors.Add(new Vector2Int(currentX,currentY));
+        }
+
+        if (hintNeighbors.Count >= 4) //we have a hint
+        {
+            _hintList = hintNeighbors;
+            return true;
+        }
+
+        return false;
     }
 
     private void AdjustColumn(int column, int row)
